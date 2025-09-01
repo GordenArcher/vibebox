@@ -1,0 +1,228 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibebox || Home</title>
+    <link rel="stylesheet" href={% static '/css/home/index.css' %}>
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    {% include "base/base.html" %}
+    
+    <main class="main-content">
+        <section class="welcome-section">
+            <div class="welcome-card">
+                <div class="welcome-content">
+                    <h1>Welcome back, Music Lover! 🎧</h1>
+                    <p> {{ profile.display_name }}! here's what's happening in your musical universe</p>
+                </div>
+                <div class="welcome-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">2.4k</div>
+                        <div class="stat-label">Songs Played</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">127</div>
+                        <div class="stat-label">Hours Listened</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">42</div>
+                        <div class="stat-label">New Discoveries</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="now-playing-section">
+            <div class="now-playing-card">
+                <div class="album-art">
+                    <div class="album-placeholder">
+                        <div class="vinyl-record">
+                            <div class="vinyl-center"></div>
+                        </div>
+                    </div>
+                    <div class="play-button">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="track-info">
+                    <h3>Blinding Lights</h3>
+                    <p>The Weeknd</p>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 35%"></div>
+                        </div>
+                        <div class="time-info">
+                            <span>1:23</span>
+                            <span>3:52</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="control-btn">⏮️</button>
+                    <button class="control-btn play-pause">⏸️</button>
+                    <button class="control-btn">⏭️</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="content-grid">
+            <section class="card top-artists">
+                <h2>Your Top Artists</h2>
+                <div class="artists-list">
+                    <div class="artist-item">
+                        <div class="artist-avatar gradient-1">TW</div>
+                        <div class="artist-info">
+                            <span class="artist-name">The Weeknd</span>
+                            <span class="play-count">234 plays</span>
+                        </div>
+                        <div class="trend up">↗️</div>
+                    </div>
+                    <div class="artist-item">
+                        <div class="artist-avatar gradient-2">BT</div>
+                        <div class="artist-info">
+                            <span class="artist-name">Billie Eilish</span>
+                            <span class="play-count">187 plays</span>
+                        </div>
+                        <div class="trend up">↗️</div>
+                    </div>
+                    <div class="artist-item">
+                        <div class="artist-avatar gradient-3">DL</div>
+                        <div class="artist-info">
+                            <span class="artist-name">Dua Lipa</span>
+                            <span class="play-count">156 plays</span>
+                        </div>
+                        <div class="trend down">↘️</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card listening-activity">
+                <h2>Listening Activity</h2>
+                <div class="activity-chart">
+                    <div class="chart-bars">
+                        <div class="bar" style="height: 60%"></div>
+                        <div class="bar" style="height: 80%"></div>
+                        <div class="bar" style="height: 45%"></div>
+                        <div class="bar" style="height: 90%"></div>
+                        <div class="bar active" style="height: 100%"></div>
+                        <div class="bar" style="height: 70%"></div>
+                        <div class="bar" style="height: 55%"></div>
+                    </div>
+                    <div class="chart-labels">
+                        <span>Mon</span>
+                        <span>Tue</span>
+                        <span>Wed</span>
+                        <span>Thu</span>
+                        <span>Fri</span>
+                        <span>Sat</span>
+                        <span>Sun</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card recent-tracks">
+                <h2>Recently Played</h2>
+                <div class="tracks-list">
+                    <div class="track-item">
+                        <div class="track-art gradient-4"></div>
+                        <div class="track-details">
+                            <span class="track-name">Good 4 U</span>
+                            <span class="track-artist">Olivia Rodrigo</span>
+                        </div>
+                        <div class="track-time">2:58</div>
+                    </div>
+                    <div class="track-item">
+                        <div class="track-art gradient-5"></div>
+                        <div class="track-details">
+                            <span class="track-name">Levitating</span>
+                            <span class="track-artist">Dua Lipa</span>
+                        </div>
+                        <div class="track-time">3:23</div>
+                    </div>
+                    <div class="track-item">
+                        <div class="track-art gradient-6"></div>
+                        <div class="track-details">
+                            <span class="track-name">Stay</span>
+                            <span class="track-artist">The Kid LAROI</span>
+                        </div>
+                        <div class="track-time">2:21</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card genre-distribution">
+                <h2>Your Music DNA</h2>
+                <div class="genre-chart">
+                    <div class="genre-item">
+                        <div class="genre-bar">
+                            <div class="genre-fill" style="width: 85%"></div>
+                        </div>
+                        <div class="genre-info">
+                            <span>Pop</span>
+                            <span>85%</span>
+                        </div>
+                    </div>
+                    <div class="genre-item">
+                        <div class="genre-bar">
+                            <div class="genre-fill" style="width: 65%"></div>
+                        </div>
+                        <div class="genre-info">
+                            <span>R&B</span>
+                            <span>65%</span>
+                        </div>
+                    </div>
+                    <div class="genre-item">
+                        <div class="genre-bar">
+                            <div class="genre-fill" style="width: 45%"></div>
+                        </div>
+                        <div class="genre-info">
+                            <span>Electronic</span>
+                            <span>45%</span>
+                        </div>
+                    </div>
+                    <div class="genre-item">
+                        <div class="genre-bar">
+                            <div class="genre-fill" style="width: 30%"></div>
+                        </div>
+                        <div class="genre-info">
+                            <span>Hip-Hop</span>
+                            <span>30%</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card quick-actions">
+                <h2>Quick Actions</h2>
+                <div class="action-buttons">
+                    <button class="action-btn">
+                        <span class="action-icon">🔀</span>
+                        <span>Shuffle Play</span>
+                    </button>
+                    <button class="action-btn">
+                        <span class="action-icon">📊</span>
+                        <span>View Stats</span>
+                    </button>
+                    <button class="action-btn">
+                        <span class="action-icon">🎵</span>
+                        <span>Discover</span>
+                    </button>
+                    <button class="action-btn">
+                        <span class="action-icon">⚡</span>
+                        <span>Create Mix</span>
+                    </button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src={% static 'js/home/index.js' %}></script>
+</body>
+</html>

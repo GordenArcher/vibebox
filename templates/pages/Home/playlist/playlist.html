@@ -1,0 +1,56 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibebox || Playlist</title>
+    <link rel="stylesheet" href={% static '/css/home/playlist.css' %}>
+    
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    {% include "base/base.html" %}
+
+    <div style="padding-top: 90px; padding-left: 10px;" class="go-back">
+        <button class="back-button" onclick="goBack()">
+            ← Back to Playlists
+        </button>
+    </div>
+
+    <div class="playlist-container">
+        <h1 class="page-title">Your Playlists</h1>
+        
+        <div class="playlists-grid" id="playlistsContainer">
+            {% for playlist in playlists %}
+               <a href={% url 'playlist_tracks' playlist.id %} class="playlist-card">
+                    <div class="playlist-image">
+                        <img src={{ playlist.images.0.url }} alt={{ playlist.name }}>
+                    </div>
+
+                    <div class="playlist-info">
+                        <h3 class="playlist-name">{{ playlist.name }}</h3>
+                        <p class="playlist-owner">By {{playlist.owner.display_name}}</p>
+                        <div class="playlist-stats">
+                            <div class="tracks-count">
+                                <span>{{ playlist.tracks.total }} tracks</span>
+                            </div>
+
+                            <span class="public-badge">
+                                {% if playlist.public %}
+                                    Public
+                                {% else %}
+                                    Private
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+               </a>
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+</html>
