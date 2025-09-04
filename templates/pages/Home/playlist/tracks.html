@@ -1,92 +1,84 @@
-{% load static %}
-{% load spotify_extras %}
+    
+    {% extends "base/base.html" %}
+    
+    {% load spotify_extras %}
+    {% load static %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibebox || Playlist Tracks</title>
-    <link rel="stylesheet" href={% static '/css/home/tracks.css' %} >
+    
 
-</head>
-<body>
-    <div class="background-animation"></div>
+    {% block title %}
+        Playlist Tracks
+    {% endblock title %}
 
-    {% include "base/base.html" %}
+    {% block extra_css %}
+        <link rel="stylesheet" href={% static '/css/home/tracks.css' %} >
+    {% endblock extra_css %}
+        
+    {% block content %}
 
-    <div style="padding-top: 90px; padding-left: 10px;" class="go-back">
-        <button class="back-button" onclick="goBack()">
-            ← Back to Playlists
-        </button>
-    </div>
-
-    <div class="playlist_tracks-container">
-        <div class="playlist-header">
-            <div class="playlist-image">
-                <img src={{ playlist.images.0.url }} alt="Playlist Cover">
+        <div class="playlist_tracks-container">
+            <div class="playlist-header">
+                <div class="playlist-image">
+                    <img src={{ playlist.images.0.url }} alt="Playlist Cover">
+                </div>
+                <div class="playlist-info">
+                    <div class="playlist-type">Playlist</div>
+                    <h1 class="playlist-name">{{ playlist.name }}</h1>
+                    <p class="playlist-description">{{ playlist.description }}</p>
+                    <div class="playlist-stats">
+                        <span class="owner">{{ playlist.owner.display_name }}</span>
+                        <span class="tracks-count">{{ playlist.tracks.total }} songs</span>
+                        <span class="tracks-count">{{ tracks.0.added_at|slice:":10" }}</span>
+                    </div>
+                </div>
             </div>
-            <div class="playlist-info">
-                <div class="playlist-type">Playlist</div>
-                <h1 class="playlist-name">{{ playlist.name }}</h1>
-                <p class="playlist-description">{{ playlist.description }}</p>
-                <div class="playlist-stats">
-                    <span class="owner">{{ playlist.owner.display_name }}</span>
-                    <span class="tracks-count">{{ playlist.tracks.total }} songs</span>
-                    <span class="tracks-count">{{ tracks.0.added_at|slice:":10" }}</span>
+            
+            <div class="tracks-container">
+                <div class="tracks-header">
+                    <div>#</div>
+                    <div>Title</div>
+                    <div>Album</div>
+                    <div>Duration</div>
+                </div>
+                
+                <div id="tracksList">
+                    {% for item in tracks %}
+                        <div class="track-item" data-track-id="{{ item.track.id }}">
+                            <div class="track-number">
+                                <span class="number">{{ forloop.counter }}</span>
+                            <button title="play" class="play-button" data-track-id="{{ item.track.id }}">
+                                    <svg viewBox="0 0 24 24" width="18" height="18">
+                                        <path fill="currentColor" d="M8 5v14l11-7z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div class="track-info">
+                                <div class="track-image">
+                                    <img src="{{ item.track.album.images.0.url }}" alt="{{ item.track.album.name }}">
+                                </div>
+                                <div class="track-details">
+                                    <div class="track-name">
+                                        {{ item.track.name }}
+                                        {% if item.track.explicit %}
+                                        <span class="explicit-badge">E</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="track-artist clamp">
+                                        {% for artist in item.track.artists %}
+                                            {{ artist.name }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="track-album clamp">{{ item.track.album.name }}</div>
+                            <div class="track-duration" data-duration-ms="{{ item.track.duration_ms }}">{{ item.track.duration_ms|ms_to_minutes }}</div>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-        
-        <div class="tracks-container">
-            <div class="tracks-header">
-                <div>#</div>
-                <div>Title</div>
-                <div>Album</div>
-                <div>Duration</div>
-            </div>
-            
-            <div id="tracksList">
-                {% for item in tracks %}
-                    <div class="track-item" data-track-id="{{ item.track.id }}">
-                        <div class="track-number">
-                            <span class="number">{{ forloop.counter }}</span>
-                            <button title="play" class="play-button" onclick="pauseTrack('{{ item.track.id }}', this)">
-                                <svg viewBox="0 0 24 24" width="18" height="18">
-                                    <path fill="currentColor" d="M8 5v14l11-7z"></path>
-                                </svg>
-                            </button>
-                        </div>
 
-                        <div class="track-info">
-                            <div class="track-image">
-                                <img src="{{ item.track.album.images.0.url }}" alt="{{ item.track.album.name }}">
-                            </div>
-                            <div class="track-details">
-                                <div class="track-name">
-                                    {{ item.track.name }}
-                                    {% if item.track.explicit %}
-                                    <span class="explicit-badge">E</span>
-                                    {% endif %}
-                                </div>
-
-                                <div class="track-artist clamp">
-                                    {% for artist in item.track.artists %}
-                                        {{ artist.name }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="track-album clamp">{{ item.track.album.name }}</div>
-                        <div class="track-duration">{{ item.track.duration_ms|ms_to_minutes }}</div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
-    <script src={% static 'js/home/track.js' %}></script>
-</body>
-</html>
-
+    {% endblock content %}

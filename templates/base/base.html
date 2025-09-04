@@ -1,393 +1,93 @@
 {% load static %}
-<nav class="navbar">
-    <style>
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: rgba(10, 10, 15, 0.9);
-            -webkit-backdrop-filter:blur(20px);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 100;
-        }
 
-        .nav-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 70px;
-        }
+<!DOCTYPE html>
+<html lang="en">
+<link>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Vibebox || {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href={% static '/css/base.css' %}></link>
+    {% block extra_css %}{% endblock %}
+</head>
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
+<body>
+    <div class="background-animation"></div>
+    <div id="toast-container"></div>
 
+    <nav class="navbar">
 
-        .logo {
-            font-size: 1.8rem;
-            background: linear-gradient(135deg, #1db954, #1ed760);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .nav-menu {
-            display: flex;
-            gap: 32px;
-        }
-
-        .nav-item {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .nav-item.active,
-        .nav-item:hover {
-            color: #1db954;
-        }
-
-        .nav-item.active::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: #1db954;
-            border-radius: 1px;
-        }
-
-        .user-menu {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-
-
-        .user-avatar img {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-        }
-
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1.2rem;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-        }
-
-        .menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .user-dropdown {
-            position: absolute;
-            top: 60px;
-            right: 20px;
-            background: rgba(5, 5, 23, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: white;
-            min-width: 220px;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-            -webkit-backdrop-filter:blur(10px);
-            backdrop-filter: blur(10px);
-            z-index: 100;
-        }
-
-        .user-dropdown p, 
-        .user-dropdown a {
-            margin: 6px 0;
-            color: rgba(255, 255, 255, 0.9);
-            text-decoration: none;
-        }
-
-        .user-dropdown a:hover {
-            text-decoration: underline;
-            color: #1DB954;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .track-item.playing .track-number .number {
-            opacity: 0;
-        }
-
-        .track-item.playing .track-number .play-button {
-            opacity: 1;
-            background-color: #1db954;
-        }
-
-        .track-item.playing .play-button svg {
-            transform: scale(1.1);
-        }
-
-        .track-item.playing .play-button.paused svg {
-            transform: scale(1);
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(29, 185, 84, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(29, 185, 84, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(29, 185, 84, 0); }
-        }
-
-        .track-item.playing {
-            background-color: rgba(29, 185, 84, 0.1);
-        }
-
-        .track-item.playing .track-number .play-button {
-            animation: pulse 2s infinite;
-        }
-
-        .player-controls {
-            position: fixed;
-            /* height: 100vh; */
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(18, 18, 18, 0.95);
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 1000;
-        }
-
-        .now-playing {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            width: 30%;
-        }
-
-        .now-playing img {
-            width: 60px;
-            height: 60px;
-            border-radius: 4px;
-        }
-
-        .track-info-small {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .track-name-small {
-            font-weight: 600;
-            font-size: 14px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 200px;
-        }
-
-        .track-artist-small {
-            font-size: 12px;
-            color: #aaa;
-        }
-
-        .playback-controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            width: 40%;
-        }
-
-        .control-button {
-            background: none;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            font-size: 20px;
-            opacity: 0.7;
-            transition: opacity 0.2s ease;
-        }
-
-        .control-button:hover {
-            opacity: 1;
-        }
-
-        .play-pause {
-            background: #fff;
-            color: #000;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-
-        .playback-bar {
-            width: 30%;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .progress-time {
-            font-size: 12px;
-            color: #aaa;
-            min-width: 40px;
-        }
-
-        .progress-bar {
-            flex: 1;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 2px;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .progress {
-            height: 100%;
-            background: #1db954;
-            border-radius: 2px;
-            width: 30%;
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 15px 20px;
-            }
-            
-            .logo {
-                font-size: 22px;
-            }
-            
-            .playlist-header {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-            
-            .playlist-image {
-                width: 200px;
-                height: 200px;
-                margin-bottom: 20px;
-            }
-            
-            .playlist-name {
-                font-size: 32px;
-            }
-            
-            .tracks-header, .track-item {
-                grid-template-columns: 30px 1fr 80px;
-            }
-            
-            .track-album {
-                display: none;
-            }
-
-            .player-controls {
-                flex-direction: column;
-                gap: 15px;
-                padding: 10px;
-            }
-
-            .now-playing, .playback-controls, .playback-bar {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .now-playing {
-                width: 100%;
-                justify-content: flex-start;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 20px 15px;
-            }
-            
-            .playlist-image {
-                width: 180px;
-                height: 180px;
-            }
-            
-            .playlist-name {
-                font-size: 28px;
-            }
-            
-            .tracks-header, .track-item {
-                grid-template-columns: 30px 1fr 60px;
-                padding: 12px 15px;
-            }
-            
-            .track-image {
-                width: 40px;
-                height: 40px;
-            }
-        }
-
-    </style>
-    <div class="nav-container">
-        <div class="logo">
-            <div class="logo-icon">🎵</div>
-            <span>Vibebox</span>
-        </div>
-        <div class="nav-menu">
-            <a href="/" class="nav-item active">Home</a>
-            <a href="#" class="nav-item">Analytics</a>
-            <a href="/me/playlist/" class="nav-item">Playlists</a>
-            <a href="" class="nav-item">Discover</a>
-        </div>
-        <div class="user-menu">
-            <div class="user-avatar">
-                <img id="userAvatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231db954'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E" alt="User" />
+        <div class="nav-container">
+            <div class="logo">
+                <div class="logo-icon">🎵</div>
+                <span>Vibebox</span>
             </div>
-            <button class="menu-toggle" onclick="toggleUserMenu()">⋮</button>
+            <div class="nav-menu">
+                <a href="/" class="nav-item active">Home</a>
+                <a href="#" class="nav-item">Analytics</a>
+                <a href="/me/playlist/" class="nav-item">Playlists</a>
+                <a href="/search/" class="nav-item">Search</a>
+            </div>
+            <div class="user-menu">
+                <div class="user-avatar">
+                    <img id="userAvatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231db954'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E" alt="User" />
+                </div>
+                <button class="menu-toggle" onclick="toggleUserMenu()">⋮</button>
 
-            <div class="user-dropdown hidden" id="userDropdown">
-                <p id="loadingText">Loading profile...</p>
-                <div id="userInfo" class="hidden">
-                    <p><strong>Name:</strong> <span id="userName"></span></p>
-                    <p><strong>Email:</strong> <span id="userEmail"></span></p>
-                    <p><strong>Country:</strong> <span id="userCountry"></span></p>
-                    <p><strong>Plan:</strong> <span id="userPlan"></span></p>
-                    <p><strong>Followers:</strong> <span id="userFollowers"></span></p>
-                    <a id="spotifyLink" href="#" target="_blank">View on Spotify</a>
+                <div class="user-dropdown hidden" id="userDropdown">
+                    <p id="loadingText">Loading profile...</p>
+                    <div id="userInfo" style="display: flex; flex-direction: column; gap: 10px;" class="hidden">
+                        <p><strong>Name:</strong> <span id="userName"></span></p>
+                        <p><strong>Email:</strong> <span id="userEmail"></span></p>
+                        <p><strong>Country:</strong> <span id="userCountry"></span></p>
+                        <p><strong>Plan:</strong> <span id="userPlan"></span></p>
+                        <p><strong>Followers:</strong> <span id="userFollowers"></span></p>
+                        <a id="spotifyLink" href="#" target="_blank">View on Spotify</a>
+                        {% if user.is_authenticated %}
+                            <a id="logout" href={% url 'logout' %}>
+                                <button class="cssbuttons-io">
+                                <span
+                                    ><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M0 0h24v24H0z" fill="none"></path>
+                                    <path
+                                        d="M24 12l-5.657 5.657-1.414-1.414L21.172 12l-4.243-4.243 1.414-1.414L24 12zM2.828 12l4.243 4.243-1.414 1.414L0 12l5.657-5.657L7.07 7.757 2.828 12zm6.96 9H7.66l6.552-18h2.128L9.788 21z"
+                                        fill="currentColor"
+                                    ></path>
+                                    </svg>
+                                    Logout
+                                    </span
+                                >
+                                </button>
+
+                            </a>
+                        {% endif %}
+                        
+                    </div>
                 </div>
             </div>
         </div>
+    </nav>
+
+    <div style="padding-top: 90px; padding-left: 10px;" class="go-back">
+        <button class="back-button" id="gobackbtn">
+            ← Back to Playlists
+        </button>
     </div>
+
+
+    <main style="margin-bottom: 140px;">
+        {% block content %}{% endblock %}
+    </main>
 
 
     <div class="player-controls" id="playerControls">
         <div class="now-playing">
-            <img id="nowPlayingImage" src="" alt="Now Playing">
+            <img id="nowPlayingImage" draggable="false" src={% static '/assets/images/spotify-icon.webp' %} alt="Now Playing">
             <div class="track-info-small">
                 <div class="track-name-small" id="nowPlayingName">Not playing</div>
                 <div class="track-artist-small" id="nowPlayingArtist">Vibebox</div>
             </div>
         </div>
-        
+            
         <div class="playback-controls">
             <button title="previous" class="control-button" onclick="previousTrack()">
                 <svg viewBox="0 0 24 24" width="24" height="24">
@@ -395,7 +95,7 @@
                 </svg>
             </button>
 
-            <button title="play" class="control-button play-pause" onclick="togglePlayPause()" id="playPauseBtn">
+            <button title="play" class="control-button play-pause" id="playPauseBtn">
                 <svg viewBox="0 0 24 24" width="16" height="16" id="playPauseIcon">
                     <path fill="currentColor" d="M8 5v14l11-7z"></path>
                 </svg>
@@ -407,7 +107,7 @@
                 </svg>
             </button>
         </div>
-        
+            
         <div class="playback-bar">
             <span class="progress-time" id="currentTime">0:00</span>
             <div class="progress-bar" onclick="seek(event)">
@@ -417,6 +117,9 @@
         </div>
     </div>
 
-    <script src={% static 'js/base.js' %}></script>
-    <script src={% static 'js/home/track.js' %}></script>
-</nav>
+    <script type="module" src="{% static 'js/base.js' %}"></script>
+    <script type="module" src="{% static 'js/home/track.js' %}"></script>
+    <!-- <script type="module" src="{% static 'js/toast.js' %}"></script> -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

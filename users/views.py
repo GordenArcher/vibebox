@@ -3,20 +3,39 @@ from django.http import HttpResponse
 import requests
 from django.shortcuts import redirect
 from django.conf import settings
-from.models import UserProfile
+from.models import UserProfile, UserRecentPlayed, MusicType, TopArtistsListened, ListeningActivity
 import base64
 from django.http import JsonResponse 
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User 
+import json
+from .decorators import login_required_json
+from django.contrib.auth import login
+import logging
+from django.db import models
+logger = logging.getLogger(__name__)
+from django.utils import timezone
+from datetime import timedelta
+from collections import Counter
+import requests
+import requests
+from django.contrib.auth import logout as auth_logout
+from datetime import date, timedelta
+from django.db.models import Sum, Count, Max
 # Create your views here.
 
 
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 SPOTIFY_PROFILE_URL = "https://api.spotify.com/v1/me"
+SPOTIFY_TRACK_LOOKUP = "https://api.spotify.com/v1/tracks/"
+SPOTIFY_SEARCH_URL = "https://api.spotify.com/v1/search"
 SPOTIFY_PLAYLISTS_URL = "https://api.spotify.com/v1/me/playlists"
 SPOTIFY_PLAYLISTS_TRACK_URL = "https://api.spotify.com/v1/me/playlists/{id}/tracks"
 SPOTIFY_PLAY_TRACK = "https://api.spotify.com/v1/me/player/play"
 SPOTIFY_PAUSE_TRACK = "https://api.spotify.com/v1/me/player/pause"
 SPOTIFY_TRACK_PLAYING = "https://api.spotify.com/v1/me/player/currently-playing"
+SPOTIFY_SEEK_TRACK = "https://api.spotify.com/v1/me/player/seek"
 SPOTIFY_CLIENT_ID = settings.SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET = settings.SPOTIFY_CLIENT_SECRET
 
@@ -50,10 +69,10 @@ def refresh_spotify_token(request):
             return access_token
         else:
             print("No access token returned:", token_info)
-            return None
+            return redirect('login')
     else:
         print("Failed to refresh token:", response.json())
-        return None
+        return redirect('login')
 
 
 
@@ -96,6 +115,71 @@ def spotify_callback(request):
     request.session["spotify_access_token"] = access_token
     request.session["spotify_refresh_token"] = refresh_token
 
+    def get_me(token):
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+        return requests.get(SPOTIFY_PROFILE_URL, headers=headers)
+
+    profile_data = get_me(access_token)
+
+    if profile_data.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            profile_data = get_me(access_token)
+        else:
+            return redirect("login")
+
+    if profile_data.status_code != 200:
+        return JsonResponse({"error": profile_data.json()}, status=profile_data.status_code)
+    
+    data = profile_data.json()
+    country = data.get("country")
+    display_name = data.get("display_name")
+    email = data.get("email")
+    followers = data.get("followers")
+    spotify_id = data.get("id")
+    images = data.get("images")
+    product = data.get("product")
+    image_url = images[0]["url"] if images else None
+    user_followers = followers["total"] if followers else 0
+
+    try:
+        profile = UserProfile.objects.get(user__email=email)
+
+        if profile.display_name != display_name:
+            profile.display_name = display_name
+            profile.save()
+
+        profile.followers = user_followers
+        profile.save()
+
+        user = profile.user
+
+    except UserProfile.DoesNotExist:
+        username = email or f"spotify_user_{display_name}"
+        user = User.objects.create_user(
+            username=username, 
+            email=email, 
+            first_name=display_name, 
+            password=f"{spotify_id}-_{display_name}" 
+        )
+        user.save()
+
+        profile = UserProfile.objects.create(
+            user=user,
+            display_email=email, 
+            display_name=display_name, 
+            country=country, 
+            followers=user_followers, 
+            spotify_id=spotify_id, 
+            product=product, 
+            profile_pic=image_url
+        )
+
+    from django.contrib.auth import login
+    login(request, user)
+
     return render(request, "pages/callback/success.html")
 
 
@@ -106,6 +190,8 @@ def login(request):
 
 
 
+
+@login_required
 def index(request):
     access_token = request.session.get("spotify_access_token")
 
@@ -118,63 +204,160 @@ def index(request):
         "Authorization": f"Bearer {access_token}"
     }
 
-    profile_res = requests.get(SPOTIFY_PROFILE_URL, headers=headers)
-    profile_data = profile_res.json()
-
+    # Get user's playlists
     playlists_res = requests.get(SPOTIFY_PLAYLISTS_URL, headers=headers)
     playlists_data = playlists_res.json()
 
-    profile_images = profile_data.get("images", [])
-
     profile_picture = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231db954'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E"
-    if profile_images:
-        profile_picture = profile_images[0].get("url")
 
+    # Get recent played tracks
+    recentPlayed = UserRecentPlayed.objects.filter(user=request.user.profile).order_by('played_at')[:5]
+
+    # Get listening activity data
+    today = date.today()
+    last_7_days = [today - timedelta(days=i) for i in range(6, -1, -1)]  # Reverse order: oldest to newest
+
+    listening_activity = ListeningActivity.objects.filter(
+        user=request.user.profile,
+        day__in=last_7_days
+    ).order_by('day')
+
+    # Create a list of listening minutes for each day
+    listening_minutes = []
+    for day in last_7_days:
+        activity = listening_activity.filter(day=day).first()
+        minutes = activity.duration_seconds // 60 if activity else 0
+        listening_minutes.append({
+            'date': day.strftime('%Y-%m-%d'),  # For comparison: '2025-09-03'
+            'day_abbr': day.strftime('%a'),     # For display: 'Mon', 'Tue'
+            'day_name': day.strftime('%A'),     # Full name: 'Monday'
+            'minutes': minutes,
+            'is_today': day == today           # Boolean flag for today
+        })
+    
+    # Get total listening time
+    total_listening_minutes = ListeningActivity.objects.filter(
+        user=request.user.profile
+    ).aggregate(total=Sum('duration_seconds'))['total'] or 0
+    total_listening_minutes = total_listening_minutes // 60
+
+    # Get top artists
+    top_artists = TopArtistsListened.objects.filter(
+        user=request.user.profile
+    ).order_by('-total_played')[:5]
+
+    # Get music types with percentages
+    music_types = MusicType.objects.filter(
+        user=request.user.profile
+    ).order_by('-percentage')[:6]  # Get top 6 music types
+
+    # Calculate total for percentage normalization if needed
+    if music_types.exists():
+        total_percentage = sum(mt.percentage for mt in music_types)
+        # Normalize percentages to sum to 100
+        if total_percentage != 100:
+            for mt in music_types:
+                mt.normalized_percentage = round((mt.percentage / total_percentage) * 100)
+        else:
+            for mt in music_types:
+                mt.normalized_percentage = mt.percentage
+    else:
+        # Default music types if none exist
+        music_types = [
+            {'music_type': 'Pop', 'normalized_percentage': 40},
+            {'music_type': 'Rock', 'normalized_percentage': 30},
+            {'music_type': 'Hip Hop', 'normalized_percentage': 20},
+            {'music_type': 'Electronic', 'normalized_percentage': 10}
+        ]
+  # Silently fail if currently playing endpoint fails
+
+    # Get user's profile info from Spotify
+    user_profile_info = None
+    try:
+        profile_res = requests.get(
+            SPOTIFY_PROFILE_URL,
+            headers=headers
+        )
+        if profile_res.status_code == 200:
+            user_profile_info = profile_res.json()
+            # Use actual profile picture if available
+            if user_profile_info.get('images'):
+                profile_picture = user_profile_info['images'][0]['url']
+    except:
+        pass  
 
     return render(request, "pages/Home/index.html", {
-        "profile_picture":profile_picture,
-        "profile": profile_data,
-        "playlists": playlists_data.get("items", [])
+        "profile_picture": profile_picture,
+        "playlists": playlists_data.get("items", []),
+        "recentPlayed": recentPlayed,
+        "listening_minutes": listening_minutes,
+        "total_listening_minutes": total_listening_minutes,
+        "top_artists": top_artists,
+        "music_types": music_types,
+        "user_profile_info": user_profile_info,
+        "today": today.strftime('%Y-%m-%d')
     })
 
 
 
 def get_user(request):
     access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
 
-    if not access_token:
+    def get_me(token):
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+
+        return requests.get(SPOTIFY_PROFILE_URL, headers=headers)
+
+    profile_data = get_me(access_token)
+
+    if profile_data.status_code == 401 and refresh_token:
         access_token = refresh_spotify_token(request)
-        if not access_token:
+
+        if access_token:
+            profile_data = get_me(access_token)
+        else:
             return redirect("login")
 
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
+    if profile_data.status_code != 200:
+        return JsonResponse({"error": profile_data.json()}, status=profile_data.status_code)
+    
+    # 
 
-    profile_res = requests.get(SPOTIFY_PROFILE_URL, headers=headers)
-    profile_data = profile_res.json()
-
-    return JsonResponse(profile_data)
+    return JsonResponse(profile_data.json())
 
 
 def playlist(request):
     access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
 
-    if not access_token:
+    def get_playlists(token):
+        headers = {"Authorization": f"Bearer {token}"}
+        return requests.get(SPOTIFY_PLAYLISTS_URL, headers=headers)
+
+    playlists_res = get_playlists(access_token)
+
+    if playlists_res.status_code == 401 and refresh_token:
         access_token = refresh_spotify_token(request)
-        if not access_token:
+        if access_token:
+            playlists_res = get_playlists(access_token)
+        else:
             return redirect("login")
 
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
+    if playlists_res.status_code != 200:
+        return render(request, "pages/Home/playlist/playlist.html", {
+            "playlists": [],
+            "error": "Could not fetch playlists"
+        })
 
-    playlists_res = requests.get(SPOTIFY_PLAYLISTS_URL, headers=headers)
     playlists_data = playlists_res.json()
 
     return render(request, "pages/Home/playlist/playlist.html", {
         "playlists": playlists_data.get("items", [])
     })
+
 
 
 def get_playlist_track(request, playlist_id):
@@ -200,81 +383,529 @@ def get_playlist_track(request, playlist_id):
     })
 
 
+
+@login_required_json
 def play_track(request):
     access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
 
     if not access_token:
         access_token = refresh_spotify_token(request)
         if not access_token:
             return redirect("login")
 
+    def playtrack(token, data):
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        return requests.put(SPOTIFY_PLAY_TRACK, headers=headers, json=data, timeout=10)
+
+    def get_track_info(uri, token):
+        try:
+            if uri.startswith("spotify:track:"):
+                track_id = uri.split(":")[2]
+            elif "spotify.com/track/" in uri:
+                track_id = uri.split("/track/")[1].split("?")[0]
+            else:
+                track_id = uri
+            
+            track_id = track_id.split("?")[0]
+            
+        except (IndexError, AttributeError):
+            return None
+
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+        
+        response = requests.get(f"{SPOTIFY_TRACK_LOOKUP}{track_id}", headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            return response.json()
+        return None
+    
+    def update_listening_activity(user_profile, duration_seconds):
+        """Update listening activity for the current day"""
+        today = timezone.now().date()
+        
+        # Get or create today's listening activity
+        activity, created = ListeningActivity.objects.get_or_create(
+            user=user_profile,
+            day=today,
+            defaults={'duration_seconds': duration_seconds}
+        )
+        
+        if not created:
+            # Update existing activity
+            activity.duration_seconds += duration_seconds
+            activity.save()
+
+    
+    def get_artist_genres(artist_id, access_token):
+        """Get genres for an artist from Spotify API"""
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            artist_data = response.json()
+            return artist_data.get('genres', [])
+        return []
+
+    def classify_music_type(genres):
+        """Classify music type based on genres"""
+        genre_mapping = {
+            'pop': ['pop', 'dance pop', 'electropop', 'synthpop'],
+            'rock': ['rock', 'alternative rock', 'indie rock', 'punk'],
+            'hiphop': ['hip hop', 'rap', 'trap', 'drill'],
+            'electronic': ['electronic', 'edm', 'house', 'techno', 'dubstep'],
+            'jazz': ['jazz', 'blues', 'bebop'],
+            'classical': ['classical'],
+            'r&b': ['r&b', 'soul', 'funk'],
+            'country': ['country', 'folk'],
+            'metal': ['metal', 'heavy metal', 'death metal'],
+            'reggae': ['reggae', 'dub', 'dancehall']
+        }
+        
+        for music_type, genre_list in genre_mapping.items():
+            for genre in genres:
+                if any(g in genre.lower() for g in genre_list):
+                    return music_type
+        
+        return "other"
+    
+    def update_top_artists(user_profile, artist_name, artist_image):
+        """Update top artists list"""
+        # Get or create artist entry
+        artist, created = TopArtistsListened.objects.get_or_create(
+            user=user_profile,
+            artist_name=artist_name,
+            defaults={
+                'artist_image': artist_image,
+                'total_played': 1
+            }
+        )
+        
+        if not created:
+            # Update existing artist
+            artist.total_played += 1
+            artist.listened_at = timezone.now()  # Update timestamp
+            artist.save()
+        
+        # Keep only top 10 artists per user
+        top_artists = TopArtistsListened.objects.filter(user=user_profile) \
+            .order_by('-total_played', '-listened_at')
+        
+        if top_artists.count() > 10:
+            for extra in top_artists[10:]:
+                extra.delete()
+    
+    def analyze_music_types(user_profile, track_info, access_token):
+        """Analyze and update music types based on track features"""
+        # Get artist ID to fetch genres
+        artist_id = track_info["artists"][0]["id"]
+        genres = get_artist_genres(artist_id, access_token)
+        
+        if genres:
+            music_type = classify_music_type(genres)
+            
+            # Update music type statistics
+            music_type_obj, created = MusicType.objects.get_or_create(
+                user=user_profile,
+                music_type=music_type,
+                defaults={'percentage': 1}
+            )
+            
+            if not created:
+                # Get total plays across all music types for this user
+                from django.db.models import Sum  # Import here or at top of file
+                total_plays = MusicType.objects.filter(user=user_profile) \
+                    .aggregate(total=Sum('percentage'))['total'] or 0
+                
+                # Update this music type's count
+                music_type_obj.percentage += 1
+                music_type_obj.save()
+                
+                # Recalculate percentages for all music types
+                total_plays += 1  # Because we added one more play
+                
+                # Update all percentages based on new total
+                for mt in MusicType.objects.filter(user=user_profile):
+                    mt.percentage = round((mt.percentage / total_plays) * 100)
+                    mt.save()
+            """Analyze and update music types based on track features"""
+            # This is a simplified example - you might want to use Spotify's audio features API
+            # or genre analysis for more accurate music type classification
+            
+            # Simple genre-based classification (you can expand this)
+            genre_mapping = {
+                'pop': ['pop', 'dance pop', 'electropop'],
+                'rock': ['rock', 'alternative rock', 'indie rock'],
+                'hiphop': ['hip hop', 'rap', 'trap'],
+                'electronic': ['electronic', 'edm', 'house', 'techno'],
+                'jazz': ['jazz', 'blues'],
+                'classical': ['classical'],
+                'r&b': ['r&b', 'soul'],
+                'country': ['country'],
+                'metal': ['metal', 'heavy metal'],
+                'reggae': ['reggae', 'dub']
+            }
+            
+            # Get artist genres (you might need to make another API call for artist details)
+            # For now, we'll use a simple approach based on available data
+            music_type = "unknown"
+            
+            # You could enhance this by calling Spotify's artist endpoint
+            # to get actual genres for more accurate classification
+            
+            # For demo purposes, let's assume we can detect from track name or other hints
+            # This is where you'd implement your actual music type detection logic
+            
+            # Update music type statistics
+            if music_type != "unknown":
+                music_type_obj, created = MusicType.objects.get_or_create(
+                    user=user_profile,
+                    music_type=music_type,
+                    defaults={'percentage': 1}
+                )
+                
+                if not created:
+                    # Simple percentage calculation (you might want more sophisticated logic)
+                    total_plays = MusicType.objects.filter(user=user_profile) \
+                        .aggregate(total=models.Sum('percentage'))['total'] or 0
+                    
+                    # Update percentage based on play count
+                    music_type_obj.percentage += 1
+                    music_type_obj.save()
+                    
+                    # Recalculate percentages for all music types
+                    total_plays += 1
+                    for mt in MusicType.objects.filter(user=user_profile):
+                        mt.percentage = round((mt.percentage / total_plays) * 100)
+                        mt.save()
+
+
     track_uri = request.GET.get("track_uri")
     if not track_uri:
         return JsonResponse({"error": "No track URI provided"}, status=400)
-
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
 
     data = {
         "uris": [track_uri]
     }
 
-    response = requests.put(SPOTIFY_PLAY_TRACK, headers=headers, json=data)
+    try:
+        response = playtrack(access_token, data)
+    except requests.exceptions.Timeout:
+        return JsonResponse({"error": "Spotify API timeout"}, status=504)
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({"error": f"Network error: {str(e)}"}, status=503)
 
+    # Handle token expiration
+    if response.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            try:
+                response = playtrack(access_token, data)
+            except requests.exceptions.RequestException as e:
+                return JsonResponse({"error": f"Network error after token refresh: {str(e)}"}, status=503)
+        else:
+            return redirect("login")
+
+    if response.status_code == 404:
+        return JsonResponse({
+            "message": "No active device found. Please open Spotify and play a track.", 
+            "reason": "NO_ACTIVE_DEVICE"
+        }, status=404)
+
+    # SUCCESS: Spotify returns 204 No Content when track plays successfully
     if response.status_code == 204:
-        return JsonResponse({"status": "playing"})
-    else:
-        return JsonResponse({"error": response.json()}, status=response.status_code)
+        # Get track info for data collection
+        track_info = get_track_info(track_uri, access_token)
+        
+        if track_info:
+            user_profile = getattr(request.user, "profile", None)
+            if user_profile:
+                track_name = track_info["name"]
+                artist_name = track_info["artists"][0]["name"]
+                artist_image = track_info["album"]["images"][0]["url"] if track_info["album"]["images"] else None
+                duration = track_info["duration_ms"] // 1000
+
+                # 1. Update UserRecentPlayed (your existing code)
+                if UserRecentPlayed.objects.filter(user=user_profile, track_owner=artist_name, track_name=track_name).exists():
+                    pass
+                else:
+                    UserRecentPlayed.objects.create(
+                        user=user_profile,
+                        track_owner=artist_name,
+                        track_name=track_name,
+                        track_image=artist_image,
+                        track_duration=duration
+                    )
+
+                # Keep only the last 5 recent tracks
+                recent_tracks = UserRecentPlayed.objects.filter(user=user_profile).order_by('-id')
+                if recent_tracks.count() > 5:
+                    for extra in recent_tracks[5:]:
+                        extra.delete()
+
+                # 2. Update ListeningActivity
+                update_listening_activity(user_profile, duration)
+                
+                # 3. Update TopArtistsListened
+                update_top_artists(user_profile, artist_name, artist_image)
+                
+                # 4. Analyze MusicType (you'll need to implement proper genre detection)
+                # analyze_music_types(user_profile, track_info)
+
+            return JsonResponse({
+                "status": "success", 
+                "message": "Track is playing",
+                "track": track_info["name"],
+                "artist": track_info["artists"][0]["name"],
+                "duration": duration
+            })
+        else:
+            return JsonResponse({
+                "status": "success",
+                "message": "Track is playing (unable to retrieve track details)"
+            })
+
+    # Handle other error status codes
+    if response.status_code >= 400:
+        try:
+            error_data = response.json()
+            return JsonResponse({
+                "error": "Spotify API error",
+                "details": error_data,
+                "status_code": response.status_code
+            }, status=response.status_code)
+        except ValueError:
+            return JsonResponse({
+                "error": f"Spotify API returned status {response.status_code}",
+                "status_code": response.status_code
+            }, status=response.status_code)
+
+    return JsonResponse({
+        "status": "success",
+        "message": f"Unexpected success status: {response.status_code}"
+    })
+
+
 
 
 def pause_track(request):
     access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
 
     if not access_token:
         access_token = refresh_spotify_token(request)
         if not access_token:
             return redirect("login")
 
+    def pausetrack(token, data):
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        return requests.put(SPOTIFY_PAUSE_TRACK, headers=headers, json=data)
+
     track_uri = request.GET.get("track_uri")
     if not track_uri:
         return JsonResponse({"error": "No track URI provided"}, status=400)
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
 
     data = {
         "uris": [track_uri]
     }
 
-    response = requests.put(SPOTIFY_PAUSE_TRACK, headers=headers, json=data)
 
-    if response.status_code == 200:
-        return JsonResponse({"data": response.json()})
-    else:
-        return JsonResponse({"error": response.json()}, status=response.status_code)
+    response = pausetrack(access_token, data)
+
+    if response.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            response = pausetrack(access_token, data)
+        else:
+            return redirect("login")
+
+        
+    
+    if response.status_code == 203:
+        return JsonResponse({"status": "paused"}, status=200)
+
+
+    try:
+        response_data = response.json()
+    except ValueError:
+        response_data = {}
+
+    if response.status_code != 200:
+        return JsonResponse({"error": response_data}, status=response.status_code)
+    
+
+
+    return JsonResponse({
+        "status": "success",
+        "message": f"Unexpected success status: {response.status_code}"
+    })
+    
 
 
 
 def get_track_playing(request):
     access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
 
-    if not access_token:
+    def get_track(token):
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        return requests.get(SPOTIFY_TRACK_PLAYING, headers=headers)
+
+    response = get_track(access_token)
+
+    if response.status_code == 401 and refresh_token:
         access_token = refresh_spotify_token(request)
-        if not access_token:
+        if access_token:
+            response = get_track(access_token)
+        else:
             return redirect("login")
 
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
+    if response.status_code == 204:
+        return JsonResponse({
+            "message": "No track is currently playing"
+        }, status=204)
+
+    try:
+        data = response.json()
+    except ValueError:
+        return JsonResponse({
+            "error": "Invalid response from Spotify",
+            "status": response.status_code,
+            "body": response.text
+        }, status=response.status_code)
+
+    # if response.status_code != 200:
+    #     return JsonResponse({"error": data}, status=response.status_code)
+
+    return JsonResponse({"data": data}, status=200)
+
+
+def search_track(request):
+    access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
+
+    def get_track(token, params):
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+        return requests.get(SPOTIFY_SEARCH_URL, headers=headers, params=params)
+
+    try:
+        request_data = json.loads(request.body)
+        query = request_data.get("q")
+        search_type = request_data.get("type", "track")
+        limit = request_data.get("limit", 10)
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({"message": "Invalid request body"}, status=400)
+
+    if not query:
+        return JsonResponse({"message": "No query was found"}, status=400)
+
+    params = {
+        "q": query,
+        "type": search_type,
+        "limit": limit
     }
 
-    response = requests.get(SPOTIFY_TRACK_PLAYING, headers=headers)
+    response = get_track(access_token, params)
 
-    if response.status_code == 200:
-        return JsonResponse({"data": response.json()})
-    else:
-        return JsonResponse({"error": response.json()}, status=response.status_code)        
+    if response.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            response = get_track(access_token, params)
+        else:
+            return redirect("login")
+
+    try:
+        response_data = response.json()
+    except ValueError:
+        return JsonResponse({
+            "error": "Invalid response from Spotify",
+            "status": response.status_code,
+            "body": response.text
+        }, status=response.status_code)
+
+    if response.status_code != 200:
+        return JsonResponse({"error": response_data}, status=response.status_code)
+
+    return JsonResponse({"data": response_data})
+
+
+
+def search(request):
+
+    return render(request, "pages/Home/search.html")
+
+
+
+
+def seek_track(request):
+    access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
+
+    def get_duration(token, data):
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        url = SPOTIFY_SEEK_TRACK
+        return requests.put(f"{url}?position_ms={int(data)}", headers=headers, json=data)
+    
+    data = json.loads(request.body)
+    duration = data.get("position_ms")
+
+    if duration is None:
+        return JsonResponse({"message":"No duration was passed"},status=400)
+    
+
+    response = get_duration(access_token, duration)
+
+    if response.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            response = get_duration(access_token, duration)
+        else:
+            return redirect("login")
+        
+
+    try:
+        data = response.json()
+    except ValueError:
+        return JsonResponse({
+            "error": "Invalid response from Spotify",
+            "status": response.status_code,
+            "body": response.text
+        }, status=response.status_code)
+
+        
+    if response.status_code != 200:
+        return JsonResponse({"error": data}, response.status_code)
+
+    
+    return JsonResponse({"success": "true"}, status=200)
+
+
+
+
+def logout(request):
+    request.session.pop('spotify_access_token', None)
+    request.session.pop('spotify_refresh_token', None)
+
+    request.session.flush()
+
+    auth_logout(request)
+
+    return redirect('login')  
