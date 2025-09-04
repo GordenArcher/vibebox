@@ -1,0 +1,100 @@
+
+    
+    {% extends "base/base.html" %}
+
+    {% load spotify_extras %}
+
+    {% load static %}
+
+    {% block title %}
+        Saved Tracks
+    {% endblock title %}
+
+    {% block extra_css %}
+      <link rel="stylesheet" href={% static '/css/home/savedTracks.css' %}>
+    {% endblock extra_css %}
+
+    {% block content %}
+
+    <div class="saved_tracks-container">
+        <div class="header">
+            <h1>Saved Tracks</h1>
+            <p>Your personal music collection</p>
+        </div>
+
+        <div class="track-controls">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search your saved tracks...">
+            </div>
+            <select class="sort-select" id="sortSelect">
+                <option value="recent">Recently Added</option>
+                <option value="title">Title A-Z</option>
+                <option value="artist">Artist A-Z</option>
+                <option value="duration">Duration</option>
+            </select>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="totalTracks">{{ saved_tracks.total }}</div>
+                <div class="stat-label">Total Tracks</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="s-totalTime">Loading...</div>
+                <div class="stat-label">Total Time</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalArtists"></div>
+                <div class="stat-label">Artists</div>
+            </div>
+        </div>
+
+        <div id="tracksList">
+            {% for item in saved_tracks.items %}
+                <div class="track-item" data-track-id="{{ item.track.id }}">
+                    <div class="track-number">
+                        <span class="number">•</span>
+
+                        <button title="play" class="play-button" data-track-id="{{ item.track.id }}">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M8 5v14l11-7z"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="track-info">
+                        <div class="track-image">
+                            <img src="{{ item.track.album.images.0.url }}" alt="{{ item.track.album.name }}">
+                        </div>
+                        <div class="track-details">
+                            <div class="track-name">
+                                {{ item.track.name }}
+                                {% if item.track.explicit %}
+                                <span class="explicit-badge">E</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="track-artist clamp">
+                                {% for artist in item.track.artists %}
+                                    {{ artist.name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track-album clamp">{{ item.track.album.name }}</div>
+                    <div class="track-duration" data-duration-ms="{{ item.track.duration_ms }}">{{ item.track.duration_ms|ms_to_minutes }}</div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div id="loadingIndicator" style="text-align: center; padding: 1rem; display: none;">
+            <p>Loading more tracks...</p>
+        </div>
+    </div>
+
+    {% endblock content %}
+
+    {% block extra_js %}
+        <script type="module" src="{% static 'js/home/savedtracks.js' %}"></script>
+    {% endblock extra_js %}

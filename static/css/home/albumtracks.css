@@ -1,101 +1,115 @@
 
-
-
-.playlist_tracks-container {
-    max-width: 1000px;
+.album-container {
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 20px;
 }
 
-.playlist-header {
+.album-header {
     display: flex;
-    align-items: flex-end;
-    gap: 25px;
+    gap: 30px;
     margin-bottom: 40px;
+    align-items: flex-end;
 }
 
-.playlist-image {
-    width: 230px;
-    height: 230px;
-    border-radius: 10px;
+.album-artwork {
+    width: 300px;
+    height: 300px;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     flex-shrink: 0;
 }
 
-.playlist-image img {
+.album-artwork img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.playlist-info {
+.album-info {
     flex: 1;
 }
 
-.playlist-type {
+.album-type {
     text-transform: uppercase;
     font-size: 14px;
-    letter-spacing: 1.5px;
-    margin-bottom: 10px;
-    color: #aaa;
+    color: #b3b3b3;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
 }
 
-.playlist-name {
+.album-title {
     font-size: 48px;
-    font-weight: 800;
-    margin-bottom: 15px;
-    background: linear-gradient(90deg, #fff, #1db954);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    margin-bottom: 12px;
+    line-height: 1.1;
 }
 
-.playlist-description {
-    color: #ccc;
+.album-artist {
+    font-size: 18px;
+    color: #b3b3b3;
     margin-bottom: 20px;
-    font-size: 16px;
-    line-height: 1.5;
 }
 
-.playlist-stats {
+.album-meta {
     display: flex;
     align-items: center;
-    gap: 15px;
-    color: #aaa;
+    gap: 20px;
+    color: #b3b3b3;
     font-size: 14px;
 }
 
-.owner {
+.album-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.album-year {
     font-weight: 600;
-    color: #fff;
 }
 
-.tracks-count::before {
-    content: "•";
-    margin-right: 15px;
+.album-tracks {
+    border-radius: 12px;
+    padding: 20px;
+    -webkit-backdrop-filter:blur(10px);
+    backdrop-filter: blur(10px);
 }
 
-.tracks-playlist_tracks-container {
-    background: rgba(255, 255, 255, 0.02);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    overflow: hidden;
+.album-play-button {
+    background: #1db954;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    margin-top: 20px;
+}
+
+.album-play-button:hover {
+    transform: scale(1.05);
 }
 
 .tracks-header {
     display: grid;
-    grid-template-columns: 50px 1fr 100px 100px;
-    padding: 15px 25px;
+    grid-template-columns: 50px 1fr 100px;
+    gap: 20px;
+    padding: 0 20px 15px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    color: #aaa;
+    color: #b3b3b3;
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
 
-#tracksList {
+.tracksList {
     display: grid;
     gap: 1rem;
     animation: fadeInUp 0.8s ease;
@@ -111,6 +125,7 @@
         transform: translateY(0);
     }
 }
+
 
 .track-item {
     display: grid;
@@ -128,6 +143,7 @@
 .track-item:hover {
     background: rgba(255, 255, 255, 0.05);
 }
+
 
 .track-number {
     font-size: 16px;
@@ -273,63 +289,27 @@
     margin-left: 8px;
 }
 
-
-
 @media (max-width: 768px) {
-    .header {
-        padding: 15px 20px;
-    }
-    
-    .logo {
-        font-size: 22px;
-    }
-    
-    .playlist-header {
+    .album-header {
         flex-direction: column;
         align-items: center;
         text-align: center;
     }
-    
-    .playlist-image {
-        width: 200px;
-        height: 200px;
-        margin-bottom: 20px;
+
+    .album-artwork {
+        width: 250px;
+        height: 250px;
     }
-    
-    .playlist-name {
+
+    .album-title {
         font-size: 32px;
     }
-    
-    .tracks-header, .track-item {
-        grid-template-columns: 30px 1fr 80px;
-    }
-    
-    .track-album {
-        display: none;
-    }
-}
 
-@media (max-width: 480px) {
-    .playlist_tracks-container {
-        padding: 20px 15px;
-    }
-    
-    .playlist-image {
-        width: 180px;
-        height: 180px;
-    }
-    
-    .playlist-name {
-        font-size: 28px;
-    }
-    
-    .tracks-header, .track-item {
-        grid-template-columns: 30px 1fr 60px;
-        padding: 12px 15px;
-    }
-    
-    .track-image {
-        width: 40px;
-        height: 40px;
+    .tracks-header,
+    .track-item {
+        grid-template-columns: 40px 1fr 80px;
+        gap: 15px;
+        padding: 10px 15px;
     }
 }
+    

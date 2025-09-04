@@ -1,0 +1,118 @@
+
+    {% extends "base/base.html/" %}
+
+    {% load static %}
+
+    {% block title %}
+        Your Library
+    {% endblock title %}
+
+    {% block extra_css %}
+        <link rel="stylesheet" href={% static '/css/home/library.css' %}>
+    {% endblock extra_css %}  
+
+    {% block content %}
+      
+        <div class="library-container">
+            <div class="library-header">
+                <div class="header-top">
+                    <h1>Your Library</h1>
+                    <div class="view-toggle">
+                        <button class="view-btn active" onclick="toggleView('grid')">Grid</button>
+                        <button class="view-btn" onclick="toggleView('list')">List</button>
+                    </div>
+                </div>
+                <div class="filter-bar">
+                    <div class="search-container">
+                        <input type="text" class="search-input" placeholder="Search in your library..." id="searchInput">
+                    </div>
+                    <div class="filter-chips">
+                        <div class="filter-chip active" data-filter="all">All</div>
+                        <div class="filter-chip" data-filter="playlists">Playlists</div>
+                        <div class="filter-chip" data-filter="albums">Albums</div>
+                        <div class="filter-chip" data-filter="artists">Artists</div>
+                        <div class="filter-chip" data-filter="podcasts">Podcasts</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <div class="stat-icon">🎵</div>
+                    <div class="stat-number">156</div>
+                    <div class="stat-label">Saved Tracks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📁</div>
+                    <div class="stat-number">23</div>
+                    <div class="stat-label">Playlists</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💿</div>
+                    <div class="stat-number">45</div>
+                    <div class="stat-label">Albums</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎤</div>
+                    <div class="stat-number">78</div>
+                    <div class="stat-label">Artists</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎧</div>
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Podcasts</div>
+                </div>
+            </div>
+
+            <div class="content-sections">
+                <div class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Recently Played</h2>
+                        <a href="#" class="see-all-btn">See all →</a>
+                    </div>
+                    <div class="grid grid-view recently-played" id="recentlyPlayed">
+                        <!-- Recently played content will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Made for You</h2>
+                        <a href="#" class="see-all-btn">See all →</a>
+                    </div>
+                    <div class="grid grid-view" id="madeForYou">
+                        <!-- Made for you content will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Your Playlists</h2>
+                        <a href={% url 'playlist' %} class="see-all-btn">See all →</a>
+                    </div>
+                    <div class="grid grid-view" id="playlists">
+                        <!-- Playlists will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Recently Added Albums</h2>
+                        <a href="#" class="see-all-btn">See all →</a>
+                    </div>
+                    <div class="grid grid-view" id="albums">
+                        <!-- Albums will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <button class="fab" title="Create Playlist" onclick="createPlaylist()">➕</button>
+            <button class="fab" title="Search" onclick="focusSearch()">🔍</button>
+        </div>
+    {% endblock content %}  
+
+    {% block extra_js %}
+        <script type="module" src={% static 'js/home/library.js' %}></script>
+    {% endblock extra_js %}

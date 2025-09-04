@@ -23,8 +23,8 @@
             </div>
             <div class="nav-menu">
                 <a href="/" class="nav-item active">Home</a>
-                <a href="#" class="nav-item">Analytics</a>
-                <a href="/me/playlist/" class="nav-item">Playlists</a>
+                <a href={% url 'saved_track' %} class="nav-item">My Tracks</a>
+                <a href="/me/library/" class="nav-item">Library</a>
                 <a href="/search/" class="nav-item">Search</a>
             </div>
             <div class="user-menu">
@@ -53,7 +53,7 @@
                                         fill="currentColor"
                                     ></path>
                                     </svg>
-                                    Logout
+                                        Logout
                                     </span
                                 >
                                 </button>
@@ -119,7 +119,6 @@
 
     <script type="module" src="{% static 'js/base.js' %}"></script>
     <script type="module" src="{% static 'js/home/track.js' %}"></script>
-    <!-- <script type="module" src="{% static 'js/toast.js' %}"></script> -->
     {% block extra_js %}{% endblock %}
 </body>
 </html>

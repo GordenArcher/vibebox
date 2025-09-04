@@ -31,11 +31,12 @@ SPOTIFY_PROFILE_URL = "https://api.spotify.com/v1/me"
 SPOTIFY_TRACK_LOOKUP = "https://api.spotify.com/v1/tracks/"
 SPOTIFY_SEARCH_URL = "https://api.spotify.com/v1/search"
 SPOTIFY_PLAYLISTS_URL = "https://api.spotify.com/v1/me/playlists"
-SPOTIFY_PLAYLISTS_TRACK_URL = "https://api.spotify.com/v1/me/playlists/{id}/tracks"
 SPOTIFY_PLAY_TRACK = "https://api.spotify.com/v1/me/player/play"
 SPOTIFY_PAUSE_TRACK = "https://api.spotify.com/v1/me/player/pause"
 SPOTIFY_TRACK_PLAYING = "https://api.spotify.com/v1/me/player/currently-playing"
 SPOTIFY_SEEK_TRACK = "https://api.spotify.com/v1/me/player/seek"
+SPOTIFY_SAVED_TRACKS = "https://api.spotify.com/v1/me/tracks"
+SPOTIFY_SAVED_TRACKS = "https://api.spotify.com/v1/me/tracks"
 SPOTIFY_CLIENT_ID = settings.SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET = settings.SPOTIFY_CLIENT_SECRET
 
@@ -78,7 +79,7 @@ def refresh_spotify_token(request):
 
 
 def spotify_login(request):
-    scope = "user-read-email user-read-private playlist-read-private  user-read-playback-state user-modify-playback-state user-read-currently-playing"
+    scope = "user-read-email user-top-read user-read-private user-library-read user-library-modify user-read-recently-played playlist-read-private user-read-playback-position user-follow-read user-follow-modify playlist-modify-public playlist-read-collaborative streaming user-read-playback-state playlist-modify-private user-modify-playback-state user-read-currently-playing"
     redirect_uri = "http://127.0.0.1:8000/callback/"
     auth_url = (
         f"{SPOTIFY_AUTH_URL}?response_type=code&client_id={SPOTIFY_CLIENT_ID}"
@@ -272,6 +273,7 @@ def index(request):
   # Silently fail if currently playing endpoint fails
 
     # Get user's profile info from Spotify
+    max_minutes = max(day['minutes'] for day in listening_minutes) or 1
     user_profile_info = None
     try:
         profile_res = requests.get(
@@ -295,7 +297,8 @@ def index(request):
         "top_artists": top_artists,
         "music_types": music_types,
         "user_profile_info": user_profile_info,
-        "today": today.strftime('%Y-%m-%d')
+        "today": today.strftime('%Y-%m-%d'),
+        "max_minutes": max_minutes
     })
 
 
@@ -360,7 +363,7 @@ def playlist(request):
 
 
 
-def get_playlist_track(request, playlist_id):
+def get_playlist_tracks(request, playlist_id):
     token = refresh_spotify_token(request)
     if not token:
         return redirect("login")
@@ -379,6 +382,32 @@ def get_playlist_track(request, playlist_id):
 
     return render(request, "pages/Home/playlist/tracks.html", {
         "playlist": playlist_data,
+        "tracks": tracks_data.get("items", [])
+    })
+
+def get_album_tracks(request, album_id):
+    token = refresh_spotify_token(request)
+    if not token:
+        return redirect("login")
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    album_url = f"https://api.spotify.com/v1/albums/{album_id}"
+    album_response = requests.get(album_url, headers=headers)
+    album_data = album_response.json()
+
+    url = f"https://api.spotify.com/v1/albums/{album_id}/tracks"
+    response = requests.get(url, headers=headers)
+    tracks_data = response.json()
+
+    print("tracks", tracks_data)
+    print("album", album_data)
+
+
+    return render(request, "pages/Home/album/albumTracks.html", {
+        "album": album_data,
         "tracks": tracks_data.get("items", [])
     })
 
@@ -600,7 +629,6 @@ def play_track(request):
     except requests.exceptions.RequestException as e:
         return JsonResponse({"error": f"Network error: {str(e)}"}, status=503)
 
-    # Handle token expiration
     if response.status_code == 401 and refresh_token:
         access_token = refresh_spotify_token(request)
         if access_token:
@@ -630,7 +658,7 @@ def play_track(request):
                 artist_image = track_info["album"]["images"][0]["url"] if track_info["album"]["images"] else None
                 duration = track_info["duration_ms"] // 1000
 
-                # 1. Update UserRecentPlayed (your existing code)
+                # 1. Update UserRecentPlayed 
                 if UserRecentPlayed.objects.filter(user=user_profile, track_owner=artist_name, track_name=track_name).exists():
                     pass
                 else:
@@ -643,7 +671,7 @@ def play_track(request):
                     )
 
                 # Keep only the last 5 recent tracks
-                recent_tracks = UserRecentPlayed.objects.filter(user=user_profile).order_by('-id')
+                recent_tracks = UserRecentPlayed.objects.filter(user=user_profile).order_by('-played_at')
                 if recent_tracks.count() > 5:
                     for extra in recent_tracks[5:]:
                         extra.delete()
@@ -654,8 +682,8 @@ def play_track(request):
                 # 3. Update TopArtistsListened
                 update_top_artists(user_profile, artist_name, artist_image)
                 
-                # 4. Analyze MusicType (you'll need to implement proper genre detection)
-                # analyze_music_types(user_profile, track_info)
+                # 4. Analyze MusicType 
+                analyze_music_types(user_profile, track_info, access_token)
 
             return JsonResponse({
                 "status": "success", 
@@ -670,7 +698,6 @@ def play_track(request):
                 "message": "Track is playing (unable to retrieve track details)"
             })
 
-    # Handle other error status codes
     if response.status_code >= 400:
         try:
             error_data = response.json()
@@ -909,3 +936,46 @@ def logout(request):
     auth_logout(request)
 
     return redirect('login')  
+
+
+
+def get_user_saved_tracks(request):
+    access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
+
+    offset = int(request.GET.get("offset", 0))
+    limit = int(request.GET.get("limit", 50))
+
+    def get_saved_tracks(token, offset, limit):
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+        url = f"{SPOTIFY_SAVED_TRACKS}?offset={offset}&limit={limit}"
+        return requests.get(url, headers=headers)
+
+    response = get_saved_tracks(access_token, offset, limit)
+
+    if response.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            response = get_saved_tracks(access_token, offset, limit)
+        else:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    data = response.json()
+
+    # If it's an AJAX request, return just JSON
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse(data)
+
+    # Otherwise render the full page (initial request)
+    return render(request, 'pages/Home/Tracks/SavedTracks.html', {
+        "saved_tracks": data
+    })
+
+
+
+
+def user_library(request):
+
+    return render(request, "pages/Home/Library/library.html")

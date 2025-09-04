@@ -155,7 +155,6 @@ function showResults(query, results, type) {
         section.style.display = 'none';
     });
 
-    // Show results based on type
     switch (type) {
         case 'track':
             showTrackResults(items);
@@ -171,7 +170,7 @@ function showResults(query, results, type) {
             break;
         case 'playlist':
             showPlaylistResults(items);
-            document.querySelector('.songs-section').style.display = 'block';
+            document.querySelector('.playlist-section').style.display = 'block';
             break;
     }
 
@@ -244,7 +243,7 @@ function showAlbumResults(albums) {
     if (!albumsGrid) return;
 
     albumsGrid.innerHTML = albums.slice(0, 12).map((album, index) => `
-        <div class="album-card">
+        <a href="/album/${album.id}/tracks" class="album-card">
             <div class="album-art">
                 ${album.images?.[0]?.url ? 
                     `<img src="${album.images[0].url}" alt="${album.name}" onerror="this.style.display='none'">` : 
@@ -258,37 +257,41 @@ function showAlbumResults(albums) {
             </div>
             <h4>${album.name || 'Unknown Album'}</h4>
             <p>${album.artists?.map(artist => artist.name).join(', ') || 'Unknown Artist'} • ${album.release_date ? new Date(album.release_date).getFullYear() : 'Unknown'}</p>
-        </div>
+        </a>
     `).join('');
 }
 
 function showPlaylistResults(playlists) {
-    const songsList = document.querySelector('.songs-list');
+    const songsList = document.querySelector('.playlists-grid');
+    console.log(songsList)
     if (!songsList) return;
 
-    const handleClick = (id) => {
-        location.href = `/me/playlist/${id}/tracks`
-    }
-
     const validPlaylists = playlists.filter(playlist => playlist !== null);
+    console.log(validPlaylists)
     
     songsList.innerHTML = validPlaylists.slice(0, 10).map((playlist, index) => `
-        <div class="song-item" onclick="${() => handleClick(`${playlist.id}`)}" "data-playlist-id="${playlist.id || ''}">
-            <div class="song-number">${index + 1}</div>
-            <div class="song-art">
+        <a href="/playlist/${playlist.id}/tracks/" "data-playlist-id="${playlist.id || ''}" class="playlist-card">
+            <div class="playlist-image">
                 ${playlist.images && playlist.images[0] && playlist.images[0].url ? 
                     `<img src="${playlist.images[0].url}" alt="${playlist.name || 'Playlist'}" onerror="this.style.display='none'">` : 
                     `<div class="gradient-${(index % 9) + 1}"></div>`
                 }
             </div>
-            <div class="song-info">
-                <div class="song-title">${playlist.name || 'Unknown Playlist'}</div>
-                <div class="song-artist">By ${playlist.owner?.display_name || 'Unknown'}</div>
+
+            <div class="playlist-info">
+                <h3 class="playlist-name">${playlist.name || 'Unknown Playlist'}</h3>
+                <p class="playlist-owner">By ${playlist?.owner?.display_name || 'Unknown'}</p>
+                <div class="playlist-stats">
+                    <div class="tracks-count">
+                        <span>${playlist.tracks?.total || 0} tracks</span>
+                    </div>
+
+                    <span class="public-badge">
+                        ${playlist.public ? 'Public' : 'Private'}
+                    </span>
+                </div>
             </div>
-            <div class="song-album">${playlist.tracks?.total || 0} tracks</div>
-            <div class="song-duration">Playlist</div>
-            <button class="song-menu">⋮</button>
-        </div>
+        </a>
     `).join('');
 }
 

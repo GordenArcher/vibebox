@@ -1,0 +1,101 @@
+
+
+    {% extends "base/base.html" %}
+
+    {% load spotify_extras %}
+
+    {% block title %}
+        {{ album.name }} - {{ album.artists.0.name }}
+    {% endblock title %}
+    
+    {% load static %}
+
+    {% block extra_css %}
+        <link rel="stylesheet" href={% static "/css/home/albumtracks.css" %}>
+    {% endblock extra_css %}
+
+    {% block content %}
+    <div class="album-container">
+
+        <div class="album-header">
+            <div class="album-artwork">
+                <img src="{{ album.images.0.url }}" alt="{{ album.name }}">
+            </div>
+            
+            <div class="album-info">
+                <div class="album-type">{{ album.album_type|title }} • {{ album.total_tracks }} track{{ album.total_tracks|pluralize }}</div>
+                <h1 class="album-title">{{ album.name }}</h1>
+                <div class="album-artist">
+                    {% for artist in album.artists %}
+                        {{ artist.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+                
+                <div class="album-meta">
+                    <span class="album-year">{{ album.release_date|slice:":4" }}</span>
+                    <span>{{ album.tracks.total }} track{{ album.tracks.total|pluralize }}</span>
+                    <span>
+                        {% with total_ms=album.tracks.items.0.duration_ms %}
+                            {% widthratio total_ms 60000 1 as minutes %}
+                            {{ minutes }} min
+                        {% endwith %}
+                    </span>
+                </div>
+
+                <button class="album-play-button">
+                    ▶
+                </button>
+            </div>
+        </div>
+
+        <div class="album-tracks">
+            <div class="tracks-header">
+                <span>#</span>
+                <span>Title</span>
+                <span>Duration</span>
+            </div>
+            
+            <div id="tracksList">
+                {% for item in tracks %}
+                <div class="track-item" data-track-id="{{ item.id }}">
+                    <div class="track-number">
+                        <span class="number">{{ forloop.counter }}</span>
+                        <button title="play" class="play-button" data-track-id="{{ item.id }}">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M8 5v14l11-7z"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="track-info">
+                        <div class="track-image">
+                            <img src="{{ item.album.images.0.url }}" alt="{{ item.album.name }}">
+                        </div>
+                        <div class="track-details">
+                            <div class="track-name">
+                                {{ item.name }}
+                                {% if item.explicit %}
+                                <span class="explicit-badge">E</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="track-artist clamp">
+                                {% for artist in item.artists %}
+                                    {{ artist.name }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="track-album clamp">{{ item.album.name }}</div>
+                    <div class="track-duration" data-duration-ms="{{ item.duration_ms }}">
+                        {{ item.duration_ms|ms_to_minutes }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+
+        </div>
+    </div>
+    {% endblock content %}

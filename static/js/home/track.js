@@ -33,8 +33,6 @@ async function play_track(trackUri) {
                 showErrorToast(data.message, data.reason);
                 return false
             }
-
-            
             
             return false;
         }
@@ -75,11 +73,12 @@ async function get_currently_playing() {
 
         if (res.status === 204) {
             // No content - no track is playing
+            console.log("Play a track from your spotify device")
             return { isPlaying: false, trackId: null, progressMs: 0, durationMs: 0 };
         }
 
         const data = await res.json();
-        console.log("Currently playing data:", data);
+        console.log("Currently playing a song.");
 
         if (res.ok && data.data && data.data.item) {
             return {
@@ -256,20 +255,20 @@ function updatePlayerControls(trackId, playing, progressMs = 0, durationMs = nul
     const totalDuration = durationMs || track.duration_ms;
     document.getElementById('totalTime').textContent = formatDuration(totalDuration);
     document.getElementById('currentTime').textContent = formatDuration(progressMs);
+    console.log(totalDuration)
     
-    // Update progress bar
+
     const progressPercent = totalDuration > 0 ? (progressMs / totalDuration) * 100 : 0;
     document.getElementById('progress').style.width = `${progressPercent}%`;
     
-    // Update play/pause button
     const playPauseIcon = document.getElementById('playPauseIcon');
     if (playing) {
-        playPauseIcon.innerHTML = '⏸';
+        playPauseIcon.innerHTML = ` <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path> `;
         if (totalDuration > 0) {
             startProgressTimer(totalDuration, progressMs);
         }
     } else {
-        playPauseIcon.innerHTML = '▶';
+        playPauseIcon.innerHTML = ` <path fill="currentColor" d="M8 5v14l11-7z"></path> `;
         stopProgressTimer();
     }
     
@@ -281,14 +280,14 @@ function updatePlayerControls(trackId, playing, progressMs = 0, durationMs = nul
 }
 
 function resetPlayerControls() {
-    document.getElementById('nowPlayingImage').src = '';
-    document.getElementById('nowPlayingImage').style.display = 'none';
+    document.getElementById('nowPlayingImage').src = '/static/assets/images/spotify-icon.webp';
+    // document.getElementById('nowPlayingImage').style.display = 'none';
     document.getElementById('nowPlayingName').textContent = 'Not playing';
-    document.getElementById('nowPlayingArtist').textContent = '';
+    document.getElementById('nowPlayingArtist').textContent = 'vibebox';
     document.getElementById('totalTime').textContent = '0:00';
     document.getElementById('currentTime').textContent = '0:00';
     document.getElementById('progress').style.width = '0%';
-    document.getElementById('playPauseIcon').innerHTML = '▶';
+    document.getElementById('playPauseIcon').innerHTML = ` <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path> `;
 }
 
 // Function to find track by ID
@@ -358,7 +357,7 @@ async function playTrack(trackId, buttonElement) {
             isPlaying = true;
             
             // Refresh state from Spotify after a short delay to ensure sync
-            setTimeout(updatePlayerFromSpotify, 1000);
+            setTimeout(updatePlayerFromSpotify);
         }
     } catch (error) {
         console.error('Error playing track:', error);
@@ -371,6 +370,7 @@ async function playTrack(trackId, buttonElement) {
         }
     }
 }
+
 
 async function resumeTrack() {
     if (!currentlyPlaying) return;
