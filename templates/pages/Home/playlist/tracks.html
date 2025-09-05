@@ -41,12 +41,13 @@
                     <div>Duration</div>
                 </div>
                 
+                
                 <div id="tracksList">
                     {% for item in tracks %}
                         <div class="track-item" data-track-id="{{ item.track.id }}">
                             <div class="track-number">
                                 <span class="number">{{ forloop.counter }}</span>
-                            <button title="play" class="play-button" data-track-id="{{ item.track.id }}">
+                                <button title="play" class="play-button" data-track-id="{{ item.track.id }}">
                                     <svg viewBox="0 0 24 24" width="18" height="18">
                                         <path fill="currentColor" d="M8 5v14l11-7z"></path>
                                     </svg>

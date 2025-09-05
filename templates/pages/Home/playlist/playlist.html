@@ -20,27 +20,27 @@
             <div class="playlists-grid" id="playlistsContainer">
                 {% for playlist in playlists %}
                 <a href={% url 'playlist_tracks' playlist.id %} class="playlist-card">
-                        <div class="playlist-image">
-                            <img src={{ playlist.images.0.url }} alt={{ playlist.name }}>
-                        </div>
+                    <div class="playlist-image">
+                        <img src={{ playlist.images.0.url }} alt={{ playlist.name }}>
+                    </div>
 
-                        <div class="playlist-info">
-                            <h3 class="playlist-name">{{ playlist.name }}</h3>
-                            <p class="playlist-owner">By {{playlist.owner.display_name}}</p>
-                            <div class="playlist-stats">
-                                <div class="tracks-count">
-                                    <span>{{ playlist.tracks.total }} tracks</span>
-                                </div>
-
-                                <span class="public-badge">
-                                    {% if playlist.public %}
-                                        Public
-                                    {% else %}
-                                        Private
-                                    {% endif %}
-                                </span>
+                    <div class="playlist-info">
+                        <h3 class="playlist-name">{{ playlist.name }}</h3>
+                        <p class="playlist-owner">By {{playlist.owner.display_name}}</p>
+                        <div class="playlist-stats">
+                            <div class="tracks-count">
+                                <span>{{ playlist.tracks.total }} tracks</span>
                             </div>
+
+                            <span class="public-badge">
+                                {% if playlist.public %}
+                                    Public
+                                {% else %}
+                                    Private
+                                {% endif %}
+                            </span>
                         </div>
+                    </div>
                 </a>
                 {% endfor %}
             </div>

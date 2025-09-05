@@ -1,0 +1,75 @@
+
+{% extends "base/base.html" %}
+
+{% load static %}
+
+{% block title %}
+    My - Albums
+{% endblock title %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href={% static '/css/home/albums.css' %}>
+{% endblock extra_css %}
+
+{% block content %}
+    <section class="album-container">
+        <div class="album-header">
+            <h1>Saved Albums</h1>
+            <p>Your personal album collection</p>
+        </div>
+
+        <div class="albums-controls">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search your saved albums...">
+            </div>
+            <select title="filter" class="sort-select" id="sortSelect">
+                <option value="recent">Recently Added</option>
+                <option value="title">Title A-Z</option>
+                <option value="artist">Artist A-Z</option>
+                <option value="duration">Duration</option>
+            </select>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number" id="totalTracks">{{ saved_albums.total }}</div>
+                <div class="stat-label">Total Albums</div>
+            </div>
+            <!-- <div class="stat-item">
+                <div class="stat-number" id="s-totalTime">Loading...</div>
+                <div class="stat-label">Total Time</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="totalArtists"></div>
+                <div class="stat-label">Artists</div>
+            </div> -->
+        </div>
+
+        <div class="album-grid" id="albumContainer">
+            {% for album in saved_albums.items %}
+                <a href="{% url 'album_tracks' album.album.id %}" class="album-card">
+                    <div class="album-image">
+                        <img src={{ album.album.images.0.url }} alt={{ album.album.name }}>
+                    </div>
+
+                    <div class="album-info">
+                        <h3 class="album-name">{{ album.album.name }}</h3>
+                        <p class="album-owner">By {{album.album.artists.0.name}}</p>
+                        <div class="album-stats">
+                            <div class="tracks-count">
+                                <span>Tracks - {{ album.album.total_tracks }} tracks</span>
+                            </div>
+
+                            <span class="public-badge">
+                               {{ album.album.album_type }}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+        
+
+
+    </section>
+{% endblock content %}

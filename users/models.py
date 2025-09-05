@@ -21,6 +21,7 @@ class UserRecentPlayed(models.Model):
     track_image = models.URLField(blank=True, null=True)
     track_name = models.CharField(max_length=1000, null=True, blank=True)
     track_owner = models.CharField(max_length=1000, null=True, blank=True)
+    track_id = models.CharField(max_length=10000, null=True, blank=True)
     track_duration = models.CharField(max_length=10, null=True, blank=True)
     played_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 

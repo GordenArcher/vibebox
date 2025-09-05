@@ -1,6 +1,8 @@
 
     {% extends "base/base.html/" %}
 
+    {% load duration_filters %}
+
     {% load static %}
 
     {% block title %}
@@ -31,7 +33,7 @@
                         <div class="filter-chip" data-filter="playlists">Playlists</div>
                         <div class="filter-chip" data-filter="albums">Albums</div>
                         <div class="filter-chip" data-filter="artists">Artists</div>
-                        <div class="filter-chip" data-filter="podcasts">Podcasts</div>
+                        <div class="filter-chip" data-filter="podcasts">releases</div>
                     </div>
                 </div>
             </div>
@@ -39,7 +41,7 @@
             <div class="stats-overview">
                 <div class="stat-card">
                     <div class="stat-icon">🎵</div>
-                    <div class="stat-number">156</div>
+                    <div class="stat-number">{{ saved_tracks.total }}</div>
                     <div class="stat-label">Saved Tracks</div>
                 </div>
                 <div class="stat-card">
@@ -49,31 +51,98 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">💿</div>
-                    <div class="stat-number">45</div>
+                    <div class="stat-number">{{ albums.total }}</div>
                     <div class="stat-label">Albums</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">🎤</div>
-                    <div class="stat-number">78</div>
+                    <div class="stat-number">{{ artist_following.artists.total }}</div>
                     <div class="stat-label">Artists</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon">🎧</div>
-                    <div class="stat-number">12</div>
-                    <div class="stat-label">Podcasts</div>
+                    <div class="stat-number">{{ new_releases.total }}</div>
+                    <div class="stat-label">New Releases</div>
                 </div>
             </div>
 
             <div class="content-sections">
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Your Playlists</h2>
+                        <a href="{% url 'playlist' %}" class="see-all-btn">See all →</a>
+                    </div>
+                    <div class="grid grid-view" id="playlists">
+                        {% for track in recentPlayed %}
+                            <div  class="card track-item" data-track-id="{{ track.track_id }}">
+                                <div class="card-cover">
+                                    {% if track.track_image %}
+                                        <img src="{{ track.track_image }}" alt="{{ track.track_name }}" class="track-art">
+                                        {% else %}
+                                        <div class="track-art gradient-{{ forloop.counter|add:3 }}">
+                                            {{ track.track_name|slice:":1"|upper }}
+                                        </div>
+                                        {% endif %}
+                                </div>
+
+                                <div class="card-info">
+                                    <div class="card-title">{{ track.track_name }}</div>
+                                    <div class="card-subtitle">{{ track.track_owner }}</div>
+                                    <div class="card-meta">{{ track.track_duration|format_duration }}</div>
+                                </div>
+
+                                <div class="play-overlay">
+                                    <button title="play" class="play-button" data-track-id="{{ track.track_id }}">
+                                        <svg viewBox="0 0 24 24" width="18" height="18">
+                                            <path fill="currentColor" d="M8 5v14l11-7z"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p>No saved tracks found.</p>
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Following</h2>
+                        <a href="#" class="see-all-btn">See all →</a>
+                    </div>
+                    <div class="grid grid-view recently-played" id="recentlyPlayed">
+                        {% for item in artist_following.artists.items %}
+                            <div class="card">
+                                <img src="{{ item.images.0.url }}" alt="{{ item.name }}">
+                                <div class="card-title">{{ item.name }}</div>
+                                <div class="card-subtitle">{{ item.artists.0.name }}</div>
+                            </div>
+                        {% empty %}
+                            <p>No new releases found.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <div class="section">
                     <div class="section-header">
                         <h2 class="section-title">Recently Played</h2>
                         <a href="#" class="see-all-btn">See all →</a>
                     </div>
                     <div class="grid grid-view recently-played" id="recentlyPlayed">
-                        <!-- Recently played content will be populated by JavaScript -->
+                        {% for item in new_releases.items %}
+                            <div class="card">
+                                <img src="{{ item.images.0.url }}" alt="{{ item.name }}">
+                                <div class="card-title">{{ item.name }}</div>
+                                <div class="card-subtitle">{{ item.artists.0.name }}</div>
+                            </div>
+                        {% empty %}
+                            <p>No new releases found.</p>
+                        {% endfor %}
                     </div>
                 </div>
+                
 
                 <div class="section">
                     <div class="section-header">
@@ -81,27 +150,69 @@
                         <a href="#" class="see-all-btn">See all →</a>
                     </div>
                     <div class="grid grid-view" id="madeForYou">
-                        <!-- Made for you content will be populated by JavaScript -->
+                        {% for playlist in featured_playlists.items %}
+                            <div class="card">
+                                <img src="{{ playlist.images.0.url }}" alt="{{ playlist.name }}">
+                                <div class="card-title">{{ playlist.name }}</div>
+                            </div>
+                        {% empty %}
+                            <p>No playlists found.</p>
+                        {% endfor %}
                     </div>
                 </div>
 
                 <div class="section">
                     <div class="section-header">
                         <h2 class="section-title">Your Playlists</h2>
-                        <a href={% url 'playlist' %} class="see-all-btn">See all →</a>
+                        <a href="{% url 'playlist' %}" class="see-all-btn">See all →</a>
                     </div>
                     <div class="grid grid-view" id="playlists">
-                        <!-- Playlists will be populated by JavaScript -->
+                        {% for item in saved_tracks.items %}
+                            <div  class="card track-item" data-track-id="{{ item.track.id }}">
+                                <div class="card-cover">
+                                    <img src="{{ item.track.album.images.0.url }}" alt="{{ track.name }}">
+                                </div>
+
+                                <div class="card-info">
+                                    <div class="card-title">{{ item.track.name }}</div>
+                                    <div class="card-subtitle">{{ item.track.artists.0.name }}</div>
+                                    <div class="card-meta">{{ item.track.album.name }}</div>
+                                </div>
+
+                                <div class="play-overlay">
+                                    <button title="play" class="play-button" data-track-id="{{ item.track.id }}">
+                                        <svg viewBox="0 0 24 24" width="18" height="18">
+                                            <path fill="currentColor" d="M8 5v14l11-7z"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p>No saved tracks found.</p>
+                        {% endfor %}
                     </div>
+
                 </div>
 
                 <div class="section">
                     <div class="section-header">
                         <h2 class="section-title">Recently Added Albums</h2>
-                        <a href="#" class="see-all-btn">See all →</a>
+                        <a href={% url 'albums' %} class="see-all-btn">See all →</a>
                     </div>
                     <div class="grid grid-view" id="albums">
-                        <!-- Albums will be populated by JavaScript -->
+                        {% for album in albums.items %}
+                            <a style="text-decoration: none; color: #fff;" href="{% url 'album_tracks' album.album.id %}"  class="card track-item" data-track-id="{{ album.id }}">
+                                <div class="card-cover">
+                                    <img src="{{ album.album.images.0.url }}" alt="{{ album.name }}">
+                                </div>
+
+                                <div class="card-info">
+                                    <div class="card-title">{{ album.album.name }}</div>
+                                    <div class="card-subtitle">Total Tracks - {{ album.album.total_tracks }}</div>
+                                    <div class="card-meta">{{ album.album.artist.name }}</div>
+                                </div>
+                            </a>
+                        {% endfor %}
                     </div>
                 </div>
             </div>

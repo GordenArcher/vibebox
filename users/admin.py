@@ -16,8 +16,8 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(UserRecentPlayed)
 class UserRecentPlayedAdmin(admin.ModelAdmin):
-    list_display = ("user", "track_name", "track_owner", "track_duration", "played_at")
-    search_fields = ("track_name", "track_owner")
+    list_display = ("user", "track_name", "track_owner", "track_duration", "track_id", "played_at")
+    search_fields = ("track_name", "track_owner", "track_id")
     list_filter = ("user",)
 
 

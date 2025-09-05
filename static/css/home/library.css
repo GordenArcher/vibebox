@@ -242,7 +242,7 @@
     grid-template-columns: 1fr;
 }
 
-.card {
+.card, .card-l {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 15px;
@@ -255,7 +255,7 @@
     overflow: hidden;
 }
 
-.card::before {
+.card::before, .card-l {
     content: '';
     position: absolute;
     top: 0;
@@ -266,7 +266,7 @@
     transition: left 0.5s ease;
 }
 
-.card:hover::before {
+.card:hover::before, .card-l {
     left: 100%;
 }
 
@@ -296,7 +296,12 @@
     box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
 }
 
-.list-card .card-cover {
+.card-cover img{
+    width: 100%;
+    position: relative;
+}
+
+.list-card .card-cover img{
     margin-bottom: 0;
     margin-right: 1rem;
     width: 60px;
@@ -343,7 +348,7 @@
     opacity: 1;
 }
 
-.play-btn {
+.play-button {
     width: 50px;
     height: 50px;
     background: #1db954;
@@ -359,12 +364,12 @@
     box-shadow: 0 4px 15px rgba(29, 185, 84, 0.4);
 }
 
-.play-btn:hover {
+.play-button:hover {
     background: #1ed760;
     transform: scale(1.05);
 }
 
-.recently-played .card-cover {
+.recently-played .card-cover img{
     border-radius: 50%;
 }
 
@@ -433,7 +438,7 @@
         text-align: center;
     }
 
-    .list-card .card-cover {
+    .list-card .card-cover img{
         margin-right: 0;
         margin-bottom: 1rem;
     }

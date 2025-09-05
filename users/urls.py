@@ -11,6 +11,7 @@ urlpatterns = [
     path("me/playlist/", views.playlist, name="playlist"),
     path("me/library/", views.user_library, name="library"),
     path("playlist/<str:playlist_id>/tracks/", views.get_playlist_tracks, name="playlist_tracks"),
+    path("me/album/", views.get_user_album, name="albums"),
     path("album/<str:album_id>/tracks/", views.get_album_tracks, name="album_tracks"),
     path("play-track/", views.play_track, name="playtrack"),
     path("pause-track/", views.pause_track, name="pausetrack"),

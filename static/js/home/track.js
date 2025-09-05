@@ -545,7 +545,7 @@ async function init() {
         tracksData = Array.from(trackElements).map(element => {
             // Add null checks for all DOM elements
             const trackNameEl = element.querySelector('.track-name');
-            const trackArtistEls = element.querySelectorAll('.track-artist a');
+            const trackArtistEls = element.querySelectorAll('.track-artist');
             const trackAlbumEl = element.querySelector('.track-album');
             const trackImageEl = element.querySelector('.track-image img');
             const trackDurationEl = element.querySelector('.track-duration');

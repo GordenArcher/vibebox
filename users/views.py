@@ -37,6 +37,9 @@ SPOTIFY_TRACK_PLAYING = "https://api.spotify.com/v1/me/player/currently-playing"
 SPOTIFY_SEEK_TRACK = "https://api.spotify.com/v1/me/player/seek"
 SPOTIFY_SAVED_TRACKS = "https://api.spotify.com/v1/me/tracks"
 SPOTIFY_SAVED_TRACKS = "https://api.spotify.com/v1/me/tracks"
+SPOTIFY_SAVED_ALBUMS = "https://api.spotify.com/v1/me/albums"
+SPOTIFY_ARTIST_FOLLOWING = "https://api.spotify.com/v1/me/following"
+
 SPOTIFY_CLIENT_ID = settings.SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET = settings.SPOTIFY_CLIENT_SECRET
 
@@ -223,7 +226,7 @@ def index(request):
         day__in=last_7_days
     ).order_by('day')
 
-    # Create a list of listening minutes for each day
+    #lists of listening minutes for each day
     listening_minutes = []
     for day in last_7_days:
         activity = listening_activity.filter(day=day).first()
@@ -252,7 +255,7 @@ def index(request):
         user=request.user.profile
     ).order_by('-percentage')[:6]  # Get top 6 music types
 
-    # Calculate total for percentage normalization if needed
+    # Calculate total for percentage normalization
     if music_types.exists():
         total_percentage = sum(mt.percentage for mt in music_types)
         # Normalize percentages to sum to 100
@@ -282,7 +285,6 @@ def index(request):
         )
         if profile_res.status_code == 200:
             user_profile_info = profile_res.json()
-            # Use actual profile picture if available
             if user_profile_info.get('images'):
                 profile_picture = user_profile_info['images'][0]['url']
     except:
@@ -385,6 +387,42 @@ def get_playlist_tracks(request, playlist_id):
         "tracks": tracks_data.get("items", [])
     })
 
+
+def get_user_album(request):
+    access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
+
+    offset = int(request.GET.get("offset", 0))
+    limit = int(request.GET.get("limit", 50))
+
+    def get_saved_albums(token, offset, limit):
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+        url = f"{SPOTIFY_SAVED_ALBUMS}?offset={offset}&limit={limit}"
+        return requests.get(url, headers=headers)
+
+    response = get_saved_albums(access_token, offset, limit)
+
+    if response.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            response = get_saved_albums(access_token, offset, limit)
+        else:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    data = response.json()
+
+    # If it's an AJAX request, return just JSON
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse(data)
+
+    return render(request, 'pages/Home/album/Albums.html', {
+        "saved_albums": data
+    })
+
+
+
 def get_album_tracks(request, album_id):
     token = refresh_spotify_token(request)
     if not token:
@@ -401,10 +439,6 @@ def get_album_tracks(request, album_id):
     url = f"https://api.spotify.com/v1/albums/{album_id}/tracks"
     response = requests.get(url, headers=headers)
     tracks_data = response.json()
-
-    print("tracks", tracks_data)
-    print("album", album_data)
-
 
     return render(request, "pages/Home/album/albumTracks.html", {
         "album": album_data,
@@ -484,17 +518,93 @@ def play_track(request):
     def classify_music_type(genres):
         """Classify music type based on genres"""
         genre_mapping = {
-            'pop': ['pop', 'dance pop', 'electropop', 'synthpop'],
-            'rock': ['rock', 'alternative rock', 'indie rock', 'punk'],
-            'hiphop': ['hip hop', 'rap', 'trap', 'drill'],
-            'electronic': ['electronic', 'edm', 'house', 'techno', 'dubstep'],
-            'jazz': ['jazz', 'blues', 'bebop'],
-            'classical': ['classical'],
-            'r&b': ['r&b', 'soul', 'funk'],
-            'country': ['country', 'folk'],
-            'metal': ['metal', 'heavy metal', 'death metal'],
-            'reggae': ['reggae', 'dub', 'dancehall']
+            'pop': [
+                'pop', 'dance pop', 'electropop', 'synthpop', 'teen pop', 'indie pop',
+                'art pop', 'pop rock', 'power pop', 'dream pop'
+            ],
+            'rock': [
+                'rock', 'alternative rock', 'indie rock', 'punk', 'hard rock',
+                'classic rock', 'garage rock', 'psychedelic rock', 'folk rock',
+                'grunge', 'pop punk', 'post-punk', 'surf rock'
+            ],
+            'hiphop': [
+                'hip hop', 'rap', 'trap', 'drill', 'gangsta rap', 'conscious hip hop',
+                'lo-fi hip hop', 'underground hip hop', 'east coast hip hop', 'west coast rap',
+                'southern hip hop'
+            ],
+            'electronic': [
+                'electronic', 'edm', 'house', 'techno', 'dubstep', 'trance',
+                'drum and bass', 'electro house', 'future bass', 'ambient techno',
+                'big room', 'progressive house', 'deep house', 'lo-fi'
+            ],
+            'jazz': [
+                'jazz', 'blues', 'bebop', 'cool jazz', 'fusion', 'swing',
+                'vocal jazz', 'latin jazz', 'smooth jazz'
+            ],
+            'classical': [
+                'classical', 'baroque', 'romantic', 'contemporary classical',
+                'modern classical', 'orchestral', 'piano', 'opera'
+            ],
+            'r&b': [
+                'r&b', 'soul', 'funk', 'neo soul', 'quiet storm',
+                'contemporary r&b', 'motown', 'blue-eyed soul'
+            ],
+            'country': [
+                'country', 'folk', 'americana', 'alt-country', 'bluegrass',
+                'honky tonk', 'country pop'
+            ],
+            'metal': [
+                'metal', 'heavy metal', 'death metal', 'black metal', 'thrash metal',
+                'metalcore', 'nu metal', 'doom metal', 'power metal'
+            ],
+            'reggae': [
+                'reggae', 'dub', 'dancehall', 'roots reggae', 'reggaeton',
+                'ska', 'calypso'
+            ],
+            'latin': [
+                'latin', 'latin pop', 'reggaeton', 'bachata', 'salsa',
+                'merengue', 'cumbia', 'tropical', 'latin trap'
+            ],
+            'kpop': [
+                'k-pop', 'kpop', 'k-rap', 'k-hip hop', 'k-indie', 'k-rock'
+            ],
+            'afrobeats': [
+                'afrobeats', 'afropop', 'naija', 'afro house', 'highlife',
+                'amapiano', 'afrotrap'
+            ],
+            'world': [
+                'world', 'arab pop', 'turkish pop', 'mandopop', 'c-pop', 'j-pop',
+                'thai pop', 'bhangra', 'bollywood', 'desi hip hop', 'african gospel'
+            ],
+            'ambient': [
+                'ambient', 'chillout', 'new age', 'downtempo', 'meditation',
+                'space music', 'atmospheric'
+            ],
+            'indie': [
+                'indie', 'indie pop', 'indie rock', 'indie folk', 'bedroom pop',
+                'lo-fi indie', 'chamber pop'
+            ],
+            'alternative': [
+                'alternative', 'alt rock', 'alt pop', 'emo', 'grunge', 'shoegaze',
+                'post-rock', 'math rock'
+            ],
+            'soundtrack': [
+                'soundtrack', 'movie score', 'video game music', 'anime',
+                'broadway', 'musical theatre'
+            ],
+            'experimental': [
+                'experimental', 'noise', 'avant-garde', 'industrial', 'glitch',
+                'field recording'
+            ],
+            'funk': [
+                'funk', 'p-funk', 'g-funk', 'disco', 'boogie'
+            ],
+            'house': [
+                'house', 'deep house', 'tech house', 'acid house', 'tropical house',
+                'future house'
+            ]
         }
+
         
         for music_type, genre_list in genre_mapping.items():
             for genre in genres:
@@ -654,26 +764,25 @@ def play_track(request):
             user_profile = getattr(request.user, "profile", None)
             if user_profile:
                 track_name = track_info["name"]
+                track_id = track_info["id"]
                 artist_name = track_info["artists"][0]["name"]
                 artist_image = track_info["album"]["images"][0]["url"] if track_info["album"]["images"] else None
                 duration = track_info["duration_ms"] // 1000
 
                 # 1. Update UserRecentPlayed 
-                if UserRecentPlayed.objects.filter(user=user_profile, track_owner=artist_name, track_name=track_name).exists():
-                    pass
-                else:
-                    UserRecentPlayed.objects.create(
-                        user=user_profile,
-                        track_owner=artist_name,
-                        track_name=track_name,
-                        track_image=artist_image,
-                        track_duration=duration
-                    )
+                UserRecentPlayed.objects.create(
+                    user=user_profile,
+                    track_owner=artist_name,
+                    track_id=track_id,
+                    track_name=track_name,
+                    track_image=artist_image,
+                    track_duration=duration
+                )
 
                 # Keep only the last 5 recent tracks
                 recent_tracks = UserRecentPlayed.objects.filter(user=user_profile).order_by('-played_at')
-                if recent_tracks.count() > 5:
-                    for extra in recent_tracks[5:]:
+                if recent_tracks.count() > 10:
+                    for extra in recent_tracks[10:]:
                         extra.delete()
 
                 # 2. Update ListeningActivity
@@ -975,7 +1084,102 @@ def get_user_saved_tracks(request):
 
 
 
+def get_user_saved_tracks_func(request):
+    access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
+
+    def get_saved_tracks(token):
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+        url = f"{SPOTIFY_SAVED_TRACKS}?offset=8&limit=8"
+        return requests.get(url, headers=headers)
+
+    response = get_saved_tracks(access_token)
+
+    if response.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            response = get_saved_tracks(access_token,)
+        else:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    data = response.json()
+
+    return data
+
+
+def get_artist_following(request):
+    access_token = request.session.get("spotify_access_token")
+    refresh_token = request.session.get("spotify_refresh_token")
+
+    def get_artist_following(token):
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+        url = f"{SPOTIFY_ARTIST_FOLLOWING}?type=artist&limit=50"
+        return requests.get(url, headers=headers)
+
+    response = get_artist_following(access_token)
+
+    if response.status_code == 401 and refresh_token:
+        access_token = refresh_spotify_token(request)
+        if access_token:
+            response = get_artist_following(access_token,)
+        else:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    data = response.json()
+
+    return data
+
+
+    
 
 def user_library(request):
+    access_token = request.session.get("spotify_access_token")
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
 
-    return render(request, "pages/Home/Library/library.html")
+    tracks = get_user_saved_tracks_func(request)
+    artist_following = get_artist_following(request)
+
+    new_releases = requests.get(
+        'https://api.spotify.com/v1/browse/new-releases?limit=10',
+        headers=headers
+    ).json()
+
+    featured_playlists = requests.get(
+        'https://api.spotify.com/v1/browse/featured-playlists?limit=10',
+        headers=headers
+    ).json()
+
+    # Example: Get categories
+    categories = requests.get(
+        'https://api.spotify.com/v1/browse/categories?limit=10',
+        headers=headers
+    ).json()
+
+    albums = requests.get(
+        f"{SPOTIFY_SAVED_ALBUMS}?offset=0&limit=4",
+        headers=headers
+    ).json()
+
+
+    recentPlayed = UserRecentPlayed.objects.filter(user=request.user.profile).order_by('played_at')[:8]
+
+
+
+    context = {
+        'new_releases': new_releases,
+        'featured_playlists': featured_playlists.get('playlists', {}),
+        'categories': categories.get('categories', {}).get('items', []),
+        "albums": albums,
+        "saved_tracks" : tracks,
+        "artist_following": artist_following,
+        "recentPlayed": recentPlayed
+    }
+
+    return render(request, "pages/Home/Library/library.html", context)
+
